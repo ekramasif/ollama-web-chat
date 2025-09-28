@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Llama3.2 — ChatGPT Clone (Full)</title>
+
+<!-- Markdown and syntax highlight -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  :root{
+    --bg:#0f1720; --panel:#0f1725; --muted:#9aa4b2; --accent1:#4e9cff; --accent2:#1a75ff;
+    --bubble-user: linear-gradient(135deg,var(--accent1),var(--accent2));
+    --bubble-bot:#141826;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:Inter,Segoe UI,system-ui,Roboto,"Helvetica Neue";background:var(--bg);color:#e6eef6}
+  .app{display:flex;height:100vh;gap:12px}
+
+/* SIDEBAR */
+  .sidebar{
+    width:260px;background:#0b1116;border-right:1px solid #111;padding:12px;display:flex;flex-direction:column;gap:12px;
+  }
+  .brand{display:flex;align-items:center;gap:10px;padding:8px 6px}
+  .brand h1{font-size:16px;margin:0}
+  .controls{display:flex;gap:8px;flex-wrap:wrap}
+  .btn{background:#0f1724;border:1px solid #16202b;padding:8px 10px;border-radius:8px;color:#dfe8f5;cursor:pointer}
+  .btn.primary{background:linear-gradient(135deg,var(--accent1),var(--accent2));border:none}
+  .model-select{width:100%;padding:8px;border-radius:8px;background:#0f1724;border:1px solid #16202b;color:#dfe8f5}
+  .convos{flex:1;overflow:auto;padding-top:6px}
+  .convo-item{padding:10px;border-radius:8px;margin-bottom:6px;background:transparent;color:#cfe7ff;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+  .convo-item:hover{background:#071426}
+  .convo-item.active{background:#071426;border-left:3px solid var(--accent1);padding-left:7px}
+  .convo-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px}
+  .small{font-size:12px;color:var(--muted)}
+
+/* MAIN */
+  .main{flex:1;display:flex;flex-direction:column;border-radius:10px;overflow:hidden}
+  .header{height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;background:#071122;border-bottom:1px solid #0b1220}
+  .header-left{display:flex;align-items:center;gap:12px}
+  .header h2{margin:0;font-size:15px}
+  .header .meta{color:var(--muted);font-size:13px}
+
+  .container{display:flex;flex:1;overflow:hidden}
+  .chat-col{flex:1;display:flex;flex-direction:column;min-width:0}
+  .chat-area{flex:1;overflow:auto;padding:20px;display:flex;flex-direction:column;gap:12px;background:linear-gradient(180deg,#071021,#071021)}
+
+  /* message wrapper */
+  .msg-wrap{display:flex;gap:12px;max-width:85%;animation:fadeIn .22s ease}
+  .msg-wrap.user{margin-left:auto;flex-direction:row-reverse}
+  .avatar{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:inline-block}
+  .avatar.user{background:var(--bubble-user)}
+  .avatar.bot{background:#2a2a3a}
+
+  .bubble{padding:12px 14px;border-radius:14px;background:var(--bubble-bot);color:#e8eef8;box-shadow:0 6px 18px rgba(0,0,0,.4);position:relative;white-space:pre-wrap}
+  .bubble.user{background:var(--bubble-user);color:white}
+  .bubble .meta{font-size:11px;color:var(--muted);margin-top:8px;text-align:right}
+  .copy-btn,.regen-btn{position:absolute;top:8px;right:8px;background:#1b2230;border:none;color:#cfe7ff;padding:4px 7px;border-radius:8px;cursor:pointer;font-size:12px;opacity:.9}
+  .regen-btn{right:86px}
+  .copy-btn:hover,.regen-btn:hover{opacity:1}
+
+  pre{background:#0b0f14;padding:12px;border-radius:8px;overflow:auto;color:#cfe7ff}
+  code{font-family:monospace}
+
+  /* input */
+  .input-holder{padding:12px;border-top:1px solid #0b1220;background:linear-gradient(180deg,transparent,#071021)}
+  .input-row{display:flex;gap:10px;align-items:flex-end}
+  textarea#prompt{flex:1;min-height:44px;max-height:220px;padding:12px;border-radius:10px;background:#071022;border:1px solid #12202b;color:#e6eef6;resize:none}
+  .send-area{display:flex;flex-direction:column;gap:8px}
+  .send-icon{width:46px;height:46px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent1),var(--accent2));color:white;cursor:pointer}
+  .mini-btn{background:#0b1220;border:1px solid #12202b;color:#cfe7ff;padding:8px;border-radius:8px;cursor:pointer}
+
+  /* mobile sidebar toggle */
+  .sidebar-toggle{display:none}
+  @media (max-width:900px){
+    .sidebar{position:fixed;left:0;top:0;bottom:0;z-index:40;transform:translateX(-110%);transition:.22s;box-shadow:10px 0 30px rgba(0,0,0,.6)}
+    .sidebar.open{transform:none}
+    .sidebar-toggle{display:inline-block;margin-left:8px;padding:8px;border-radius:8px;background:#0f1724;border:1px solid #16202b;color:#dfe8f5;cursor:pointer}
+    .app .main{margin-left:0}
+  }
+
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+  <div class="app" style="width:100%">
+    <div class="sidebar" id="sidebar">
+      <div class="brand">
+        <div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--accent1),var(--accent2))"></div>
+        <div>
+          <h1>Llama3.2</h1>
+          <div class="small" style="margin-top:4px">Local Ollama</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn primary" id="newChatBtn">+ New chat</button>
+        <button class="btn" id="exportBtn">Export</button>
+        <button class="btn" id="clearBtn">Clear storage</button>
+      </div>
+
+      <select id="modelSelect" class="model-select" title="Model">
+        <option value="llama3.2">llama3.2</option>
+      </select>
+
+      <div style="font-size:13px;color:var(--muted);padding:8px 4px">Conversations</div>
+      <div class="convos" id="convoList"></div>
+    </div>
+
+    <div class="main">
+      <div class="header">
+        <div class="header-left">
+          <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+          <h2 id="chatTitle">New chat</h2>
+          <div class="meta" style="margin-left:12px" id="chatMeta"></div>
+        </div>
+        <div class="header-right">
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn" id="stopBtn" title="Stop generating" style="display:none">Stop</button>
+            <button class="btn" id="regenerateHeader">Regenerate</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="container">
+        <div class="chat-col">
+          <div id="chat" class="chat-area" role="log" aria-live="polite"></div>
+
+          <div class="input-holder">
+            <div class="input-row">
+              <textarea id="prompt" placeholder="Type a message... (Shift+Enter = newline)"></textarea>
+              <div class="send-area">
+                <button id="sendBtn" class="send-icon" title="Send">➤</button>
+                <button id="addMessageBtn" class="mini-btn" title="Add sample">Sample</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ===== Storage model =====
+  store object: { chats: [{ id, title, messages:[{role, content, ts}] }], activeId }
+  localStorage key: llama3_chats_v2
+*/
+const STORAGE_KEY = "llama3_chats_v2";
+const PROXY_URL = "http://localhost:3000/api/generate"; // proxy that adds CORS OR ollama direct if browser security disabled
+
+let store = { chats: [], activeId: null };
+let streamingController = null; // AbortController for running stream
+
+/* ---------- Utils ---------- */
+function uid(len=10){ const s="abcdefghijklmnopqrstuvwxyz0123456789"; let r=""; for(let i=0;i<len;i++) r+=s[Math.floor(Math.random()*s.length)]; return r }
+function nowTS(){ const d=new Date(); return d.getHours().toString().padStart(2,"0")+":"+d.getMinutes().toString().padStart(2,"0") }
+function saveStore(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); }catch(e){console.warn("save failed",e)} }
+function loadStore(){ const raw = localStorage.getItem(STORAGE_KEY); if(raw){ try{ store=JSON.parse(raw);}catch(e){store={chats:[],activeId:null}} } else { store={chats:[],activeId:null} } }
+
+/* ---------- UI elements ---------- */
+const convoList = document.getElementById("convoList");
+const chatEl = document.getElementById("chat");
+const chatTitle = document.getElementById("chatTitle");
+const chatMeta = document.getElementById("chatMeta");
+const promptEl = document.getElementById("prompt");
+const sendBtn = document.getElementById("sendBtn");
+const newChatBtn = document.getElementById("newChatBtn");
+const exportBtn = document.getElementById("exportBtn");
+const clearBtn = document.getElementById("clearBtn");
+const modelSelect = document.getElementById("modelSelect");
+const regenerateHeader = document.getElementById("regenerateHeader");
+const stopBtn = document.getElementById("stopBtn");
+const sidebar = document.getElementById("sidebar");
+const sidebarToggle = document.getElementById("sidebarToggle");
+
+/* ---------- Rendering & convo management ---------- */
+function renderConvoList(){
+  convoList.innerHTML = "";
+  for(const c of store.chats){
+    const item = document.createElement("div");
+    item.className = "convo-item" + (c.id===store.activeId? " active":"");
+    const title = document.createElement("div");
+    title.className = "convo-title";
+    title.textContent = c.title || "Untitled";
+    title.title = c.title || "Untitled";
+    item.appendChild(title);
+
+    const actions = document.createElement("div");
+    actions.style.display="flex"; actions.style.gap="6px";
+    const del = document.createElement("button"); del.className="mini-btn"; del.textContent="✕"; del.title="Delete";
+    del.onclick = (e)=>{ e.stopPropagation(); if(confirm("Delete conversation?")){ store.chats = store.chats.filter(x=>x.id!==c.id); if(store.activeId===c.id) store.activeId = store.chats[0]?.id || null; saveStore(); renderConvoList(); renderActiveChat(); } };
+    actions.appendChild(del);
+
+    item.appendChild(actions);
+    item.onclick = ()=>{ store.activeId = c.id; saveStore(); renderConvoList(); renderActiveChat(); if(window.innerWidth<=900) sidebar.classList.remove("open") };
+
+    convoList.appendChild(item);
+  }
+}
+
+function createNewChat(title){
+  const id = uid(12);
+  const chat = { id, title: title || "New chat", messages: [] };
+  store.chats.unshift(chat);
+  store.activeId = id;
+  saveStore(); renderConvoList(); renderActiveChat();
+}
+
+function getActiveChat(){ return store.chats.find(c=>c.id===store.activeId) || null }
+
+function renderActiveChat(){
+  chatEl.innerHTML = "";
+  const active = getActiveChat();
+  if(!active){
+    chatTitle.textContent = "No conversation";
+    chatMeta.textContent = "";
+    return;
+  }
+  chatTitle.textContent = active.title || "Conversation";
+  chatMeta.textContent = `${active.messages.length} messages`;
+  // render messages in chronological order
+  for(const msg of active.messages){
+    const node = createMessageNode(msg.role, msg.content, msg.ts);
+    chatEl.appendChild(node);
+  }
+  // scroll bottom
+  setTimeout(()=> chatEl.scrollTop = chatEl.scrollHeight, 60);
+}
+
+/* create DOM for a message; note: for assistant we do NOT attach copy/regenerate until finished streaming */
+function createMessageNode(role, content, ts){
+  const wrap = document.createElement("div");
+  wrap.className = "msg-wrap " + (role==="user" ? "user" : "bot");
+  const avatar = document.createElement("div"); avatar.className = "avatar " + (role==="user"?"user":"bot");
+  const bubble = document.createElement("div"); bubble.className = "bubble " + (role==="user"?"user":"bot");
+  if(role==="assistant"){
+    bubble.innerHTML = marked.parse(content || "");
+    // timestamp at bottom of bubble
+    const meta = document.createElement("div"); meta.className="meta"; meta.textContent = ts || "";
+    bubble.appendChild(meta);
+    // if message already finished (we infer finished if content non-empty and does not end with special STREAMING_MARKER)
+    // copy/regenerate are added later after stream completes - handled where streaming finishes
+  } else {
+    bubble.textContent = content;
+    const meta = document.createElement("div"); meta.className="meta"; meta.textContent = ts || "";
+    bubble.appendChild(meta);
+  }
+  wrap.appendChild(avatar); wrap.appendChild(bubble);
+  return wrap;
+}
+
+/* add assistant placeholder and return bubble element */
+function appendAssistantPlaceholder(){
+  const active = getActiveChat();
+  if(!active) return null;
+  const ts = nowTS();
+  active.messages.push({ role: "assistant", content: "", ts });
+  saveStore();
+  const node = createMessageNode("assistant", "", ts);
+  chatEl.appendChild(node);
+  // scroll to bottom smoothly
+  setTimeout(()=> chatEl.scrollTop = chatEl.scrollHeight, 20);
+  return node.querySelector(".bubble");
+}
+
+/* update the last assistant content live */
+function updateLastAssistantContent(text){
+  const active = getActiveChat();
+  if(!active) return;
+  // find last assistant from end
+  for(let i=active.messages.length-1;i>=0;i--){
+    if(active.messages[i].role==="assistant"){ active.messages[i].content = text; saveStore(); break; }
+  }
+  // update DOM last bubble
+  const bubbles = Array.from(chatEl.querySelectorAll(".bubble.bot"));
+  const last = bubbles[bubbles.length-1];
+  if(last){ last.innerHTML = marked.parse(text); hljs.highlightAll(); }
+}
+
+/* finalize last assistant: add copy & regen buttons and timestamp (after stream done) */
+function finalizeLastAssistant(){
+  // find last bubble DOM (the last .bubble.bot)
+  const bubbles = Array.from(chatEl.querySelectorAll(".bubble.bot"));
+  const last = bubbles[bubbles.length-1];
+  if(!last) return;
+  // avoid duplicate buttons
+  if(last.querySelector(".copy-btn")) return;
+
+  // append timestamp (move existing meta if present)
+  const meta = document.createElement("div"); meta.className="meta"; meta.textContent = nowTS();
+  // append copy button
+  const copyBtn = document.createElement("button"); copyBtn.className="copy-btn"; copyBtn.textContent="Copy";
+  copyBtn.onclick = (e)=>{
+    e.stopPropagation();
+    navigator.clipboard.writeText(last.innerText || "").then(()=>{ copyBtn.textContent="Copied!"; setTimeout(()=>copyBtn.textContent="Copy",1000) });
+  };
+  // append per-message regen
+  const regenBtn = document.createElement("button"); regenBtn.className="regen-btn"; regenBtn.textContent="Regenerate";
+  regenBtn.onclick = (e)=>{
+    e.stopPropagation();
+    // find that message's content in history and regenerate
+    const active = getActiveChat();
+    if(!active) return;
+    const targetContent = last.innerText || "";
+    // find index of assistant message matching content (last occurrence)
+    let idx = -1;
+    for(let i=active.messages.length-1;i>=0;i--){
+      if(active.messages[i].role==="assistant" && active.messages[i].content.trim() === targetContent.trim()){ idx = i; break; }
+    }
+    if(idx===-1){ alert("Could not locate message to regenerate."); return; }
+    regenerateFromIndex(idx);
+  };
+
+  last.appendChild(meta);
+  last.appendChild(copyBtn);
+  last.appendChild(regenBtn);
+}
+
+/* ---------- Stream handling (with AbortController) ---------- */
+async function streamAssistant(promptText){
+  // ensure active chat exists and we have an assistant placeholder bubble
+  const active = getActiveChat();
+  if(!active) { createNewChat(); }
+  // append placeholder & get bubble
+  const bubble = appendAssistantPlaceholder();
+  if(!bubble) return;
+
+  // build prompt from conversation (simple concatenation)
+  const payload = {
+    model: modelSelect.value || "llama3.2",
+    prompt: active.messages.map(m => `${m.role}: ${m.content}`).join("\n") + "\nassistant:"
+  };
+
+  // prepare abort controller
+  if(streamingController){ streamingController.abort(); streamingController=null; }
+  streamingController = new AbortController();
+  stopBtn.style.display = "inline-block";
+
+  try{
+    const res = await fetch(PROXY_URL, {
+      method:"POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(payload),
+      signal: streamingController.signal
+    });
+
+    if(!res.body){ throw new Error("No streaming body") }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let acc = "";
+
+    // while streaming, update DOM progressively
+    while(true){
+      const { done, value } = await reader.read();
+      if(done) break;
+      const chunk = decoder.decode(value);
+      // chunk may contain multiple JSON lines
+      const lines = chunk.split("\n").filter(l => l.trim());
+      for(const line of lines){
+        try{
+          const obj = JSON.parse(line);
+          if(obj.response){
+            acc += obj.response;
+            updateLastAssistantContent(acc);
+            // smooth small scroll toward bottom without jump
+            requestAnimationFrame(()=>{ chatEl.scrollTop = chatEl.scrollHeight; });
+          }
+        }catch(e){
+          // ignore parse errors
+        }
+      }
+    }
+
+    // stream finished
+    finalizeLastAssistant();
+  }catch(err){
+    if(err.name === "AbortError"){
+      // user pressed Stop
+      // leave current partial text as-is and finalize (but mark as partial)
+      const lastBubble = Array.from(chatEl.querySelectorAll(".bubble.bot")).pop();
+      if(lastBubble){
+        const note = document.createElement("div"); note.className="small"; note.style.color="#ffb4b4"; note.style.marginTop="6px"; note.textContent="— stopped";
+        lastBubble.appendChild(note);
+        finalizeLastAssistant();
+      }
+    } else {
+      // error
+      const lastBubble = Array.from(chatEl.querySelectorAll(".bubble.bot")).pop();
+      if(lastBubble){ lastBubble.textContent = "[Error: could not reach model]"; }
+    }
+  } finally{
+    // hide stop btn
+    stopBtn.style.display = "none";
+    streamingController = null;
+    // update saved store (last assistant already updated during streaming in updateLastAssistantContent)
+    saveStore();
+    renderConvoList();
+  }
+}
+
+/* regenerate starting at assistant index idx: truncate after idx and re-stream */
+async function regenerateFromIndex(idx){
+  const active = getActiveChat();
+  if(!active) return;
+  // ensure there's a user message before idx
+  let foundUser = -1;
+  for(let i=idx-1;i>=0;i--){ if(active.messages[i].role==="user"){ foundUser = i; break; } }
+  if(foundUser===-1){ alert("No user context to regenerate from"); return; }
+  // truncate after idx (remove idx and later messages)
+  active.messages.splice(idx, active.messages.length - idx);
+  // append placeholder assistant (empty) then stream
+  active.messages.push({ role:"assistant", content:"", ts: nowTS() });
+  saveStore(); renderActiveChat();
+  await streamAssistant(); // uses updated active.messages to send prompt
+}
+
+/* regenerate last assistant reply (header button) */
+async function regenerateLast(){
+  const active = getActiveChat();
+  if(!active) return;
+  // find last assistant index
+  let idx = -1;
+  for(let i=active.messages.length-1;i>=0;i--){ if(active.messages[i].role==="assistant"){ idx=i; break; } }
+  if(idx===-1){ alert("No assistant message to regenerate"); return; }
+  // ensure user exists before it
+  let foundUser = -1;
+  for(let i=idx-1;i>=0;i--){ if(active.messages[i].role==="user"){ foundUser=i; break; } }
+  if(foundUser===-1){ alert("No user message to base from"); return; }
+  // truncate from idx, append empty assistant and stream
+  active.messages.splice(idx, active.messages.length - idx);
+  active.messages.push({ role:"assistant", content:"", ts: nowTS() });
+  saveStore(); renderActiveChat();
+  await streamAssistant();
+}
+
+/* ---------- Events & initialization ---------- */
+sendBtn.addEventListener("click", async ()=>{
+  const text = promptEl.value.trim();
+  if(!text) return;
+  // ensure active
+  if(!store.activeId){ createNewChat(); }
+  const active = getActiveChat();
+  // append user message
+  const msg = { role:"user", content:text, ts: nowTS() };
+  active.messages.push(msg);
+  saveStore();
+  renderActiveChat();
+  promptEl.value = "";
+  // start streaming assistant
+  await streamAssistant();
+});
+
+promptEl.addEventListener("keydown", (e)=>{
+  if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); sendBtn.click(); }
+});
+
+// new chat
+newChatBtn.addEventListener("click", ()=>{ createNewChat("New chat"); });
+
+// export
+exportBtn.addEventListener("click", ()=>{
+  const blob = new Blob([JSON.stringify(store, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href=url; a.download=`llama3_chats_${Date.now()}.json`; a.click(); URL.revokeObjectURL(url);
+});
+
+// clear
+clearBtn.addEventListener("click", ()=>{ if(confirm("Clear all saved conversations?")){ localStorage.removeItem(STORAGE_KEY); store={chats:[],activeId:null}; renderConvoList(); renderActiveChat(); }});
+
+// regenerate header
+regenerateHeader.addEventListener("click", ()=> regenerateLast());
+
+// stop
+stopBtn.addEventListener("click", ()=>{ if(streamingController){ streamingController.abort(); } });
+
+// sidebar toggle (mobile)
+sidebarToggle.addEventListener("click", ()=> sidebar.classList.toggle("open"));
+
+// sample message button
+document.getElementById("addMessageBtn").addEventListener("click", ()=>{
+  promptEl.value = "Give me 3 quick ideas for a local small-POC real estate AI product (houses-only)";
+  promptEl.focus();
+});
+
+// model select change -> update header label
+modelSelect.addEventListener("change", ()=> { document.getElementById("chatTitle").textContent = getActiveChat()?.title || "Conversation"; });
+
+/* ---------- load / boot ---------- */
+function createNewChat(title){
+  const id = uid(12);
+  const chat = { id, title: title || "New chat", messages: [] };
+  store.chats.unshift(chat);
+  store.activeId = id;
+  saveStore(); renderConvoList(); renderActiveChat();
+}
+
+loadStore();
+// if none exist, create one
+if(!store.chats.length){ createNewChat("New chat") }
+if(!store.activeId){ store.activeId = store.chats[0].id; saveStore(); }
+renderConvoList();
+renderActiveChat();
+
+</script>
+</body>
+</html>
