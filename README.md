@@ -1,5 +1,7 @@
 ## 🧠 Local ChatGPT Clone with Ollama
 
+![Demo Screenshot](image.png)
+
 A modern ChatGPT-style web interface powered by Ollama and open-source LLMs like `llama3.2`.  
 Chat with AI offline, directly on your machine.
 
