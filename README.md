@@ -63,13 +63,13 @@ ollama serve
 
 ### 4. Run the Chat Web UI
 
-Open your HTML file (`chat.html`) in a browser.
+Open your HTML file (`ollama.html`) in a browser.
 
 Or use a simple Python HTTP server:
 ```sh
 python3 -m http.server 8000
 ```
-Then visit 👉 [http://localhost:8000/chat.html](http://localhost:8000/chat.html)
+Then visit 👉 [http://localhost:8000/ollama.html](http://localhost:8000/ollama.html)
 
 ---
 
@@ -83,7 +83,7 @@ Then visit 👉 [http://localhost:8000/chat.html](http://localhost:8000/chat.htm
 
 ## 🔧 Customization
 
-Change which model you use in `chat.html`:
+Change which model you use in `ollama.html`:
 
 ```js
 body: JSON.stringify({
